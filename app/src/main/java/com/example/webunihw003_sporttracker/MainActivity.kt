@@ -1,33 +1,51 @@
 package com.example.webunihw003_sporttracker
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
+import android.location.LocationManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentManager
 import com.example.webunihw003_sporttracker.databinding.ActivityMainBinding
 import com.example.webunihw003_sporttracker.location.MainLocationManager
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.Task
 import java.util.*
 import kotlin.concurrent.thread
 
-class  MainActivity : AppCompatActivity(), MainLocationManager.OnNewLocationAvailable {
+class  MainActivity : AppCompatActivity(), OnMapReadyCallback, MainLocationManager.OnNewLocationAvailable
+     {
     private lateinit var mainLocatoinManager: MainLocationManager
     private lateinit var binding: ActivityMainBinding
+    private lateinit var mMap: GoogleMap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        val mapFragment =  supportFragmentManager?.findFragmentById(R.id.frg_map) as SupportMapFragment?
+        if (mapFragment != null) {
+            mapFragment.onCreate(savedInstanceState)
+            mapFragment.getMapAsync(this)
+        }
 
         mainLocatoinManager = MainLocationManager(this, this)
 
@@ -39,7 +57,19 @@ class  MainActivity : AppCompatActivity(), MainLocationManager.OnNewLocationAvai
 
         requestNeededPermission()
 
+
+
     }//ONCREATE
+
+         override fun onMapReady(googleMap: GoogleMap?) {
+             googleMap?.let {
+                 mMap = googleMap
+                 mMap.uiSettings.isCompassEnabled = true
+                 mMap.uiSettings.isZoomControlsEnabled = true
+                 mMap.uiSettings.isMapToolbarEnabled = true
+                 mMap.uiSettings.isMyLocationButtonEnabled = true
+             }
+         }
 
     //--------------------------------------------------------------------------------------------
     fun checkGlobalLocationSettings() {
@@ -179,13 +209,46 @@ class  MainActivity : AppCompatActivity(), MainLocationManager.OnNewLocationAvai
 
                 runOnUiThread {
                     Toast.makeText(this, addr, Toast.LENGTH_LONG).show()
-                }
+
+                    mMap.apply {
+                            addMarker(MarkerOptions().apply {
+                                position(LatLng(location.latitude,location.longitude))
+                                title("Hely")
+                                snippet("Valami")
+                            })
+                        }
+                        //focus on user's location!
+                        goToMyLocation()
+                    }
+
+
             } catch (e: Exception) {
                 e.printStackTrace()
                 Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
+
+    @SuppressLint("MissingPermission")
+    private fun goToMyLocation(): Boolean {
+        this.let {
+            val locationManager = it.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            if (location != null) {
+                mMap.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(
+                            location.latitude,
+                            location.longitude
+                        ), 12.0f
+                    )
+                )
+            }
+        }
+        return true
+    }
+
+
 
 
     override fun onDestroy() {

@@ -55,4 +55,5 @@ dependencies {
 
     implementation 'com.sucho:placepicker:1.1.2'
     implementation 'com.google.android.libraries.places:places:2.2.0'
+
 }
